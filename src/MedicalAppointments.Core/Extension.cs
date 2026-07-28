@@ -1,6 +1,6 @@
 ﻿namespace MedicalAppointments.Core
 {
-    public class Class1
+    public class Extension
     {
 
     }

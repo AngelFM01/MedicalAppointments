@@ -1,1 +1,17 @@
-<Solution />
+<Solution>
+  <Folder Name="/A.Domain/">
+    <Project Path="src/MedicalAppointments.Domain/MedicalAppointments.Domain.csproj" Id="d3ad9192-f5cb-40ea-8e64-d42774dd27ea" />
+  </Folder>
+  <Folder Name="/B.Core/">
+    <Project Path="src/MedicalAppointments.Core/MedicalAppointments.Core.csproj" Id="5918a105-3ae7-4c8d-9db2-9dc62f25b987" />
+  </Folder>
+  <Folder Name="/C.Persistence/">
+    <Project Path="src/MedicalAppointments.Persistence/MedicalAppointments.Persistence.csproj" Id="4ddc1735-8827-4416-ac94-f7b85a6c5197" />
+  </Folder>
+  <Folder Name="/D.Infrastructure/">
+    <Project Path="src/MedicalAppointments.Infrastructure/MedicalAppointments.Infrastructure.csproj" Id="bc424d5c-1129-45f0-8c55-baa906a3eec1" />
+  </Folder>
+  <Folder Name="/E.Api/">
+    <Project Path="src/MedicalAppointments.Api/MedicalAppointments.Api.csproj" Id="fe49f117-d392-443c-ad90-26ce43d1f0d9" />
+  </Folder>
+</Solution>
