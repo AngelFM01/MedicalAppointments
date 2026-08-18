@@ -1,0 +1,16 @@
+@Api_HostAddress = http://localhost:5268
+
+POST {{Api_HostAddress}}/api/patients
+Content-Type: application/json
+
+{
+  "documentNumber": "12345678-9",
+  "firstName": "Ana",
+  "lastName": "Martinez",
+  "birthDate": "1990-05-14",
+  "sex": "Female",
+  "phone": "+50370000000",
+  "email": "ana.martinez@example.com",
+  "address": "San Salvador",
+  "maritalStatus": "Single"
+}

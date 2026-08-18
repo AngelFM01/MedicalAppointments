@@ -1,0 +1,17 @@
+<Solution>
+  <Folder Name="/A.Domain/">
+    <Project Path="src/Domain/Domain.csproj" />
+  </Folder>
+  <Folder Name="/B.Core/">
+    <Project Path="src/Core/Core.csproj" />
+  </Folder>
+  <Folder Name="/C.Persistence/">
+    <Project Path="src/Persistence/Persistence.csproj" />
+  </Folder>
+  <Folder Name="/D.Externals/">
+    <Project Path="src/Externals/Externals.csproj" />
+  </Folder>
+  <Folder Name="/E.Api/">
+    <Project Path="src/Api/Api.csproj" />
+  </Folder>
+</Solution>
