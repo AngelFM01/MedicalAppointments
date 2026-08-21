@@ -15,7 +15,8 @@ public static class Extension
             ?? throw new InvalidOperationException("No se configuró la cadena de conexión 'sql:cx'.");
 
         services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
-        services.AddScoped<IPatients, PatientRepository>();
+        services.AddScoped<IPatientsRepository, PatientsRepository>();
+        services.AddScoped<IContactosEmergenciaRepository, ContactosEmergenciaRepository>();
         return services;
     }
 }

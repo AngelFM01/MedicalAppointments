@@ -5,7 +5,8 @@ namespace Persistence.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-    public DbSet<Patient> Patients => Set<Patient>();
+    public DbSet<Paciente> Pacientes => Set<Paciente>();
+    public DbSet<ContactoEmergencia> ContactosEmergencia => Set<ContactoEmergencia>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
