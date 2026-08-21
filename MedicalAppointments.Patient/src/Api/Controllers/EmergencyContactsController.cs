@@ -5,10 +5,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace Api.Controllers;
 
 [ApiController]
-[Route("api/patients/{pacienteId:long}/emergency-contacts")]
+[Route("patients/{pacienteId:long}/emergency-contacts")]
 public sealed class ContactosEmergenciaController(IPatientsRepository patientsRepository, IContactosEmergenciaRepository contactsRepository) : ControllerBase
 {
-    [HttpGet("/api/EmergencyContacts")]
+    [HttpGet("/EmergencyContacts")]
     public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAllContacts(CancellationToken cancellationToken) =>
         Ok(await contactsRepository.GetAllAsync(cancellationToken));
 

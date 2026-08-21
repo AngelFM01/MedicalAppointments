@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Api.Controllers;
 
 [ApiController]
-[Route("api/patients")]
+[Route("patients")]
 public sealed class PacientesController(IPatientsRepository patientsRepository) : ControllerBase
 {
     [HttpGet]
