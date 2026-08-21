@@ -3,13 +3,10 @@ using Microsoft.EntityFrameworkCore;
 using Persistence;
 using Persistence.Data;
 using System.Text.Json.Serialization;
-using static Core.Features.FEmergencyContacts.CreatemergencyContacts;
-
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(CreateEmergencyContactsCommand).Assembly));
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddScoped<CreatePatientService>();
 builder.Services.AddOpenApi();
