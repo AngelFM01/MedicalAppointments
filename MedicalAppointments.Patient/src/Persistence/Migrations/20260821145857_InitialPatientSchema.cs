@@ -91,6 +91,24 @@ namespace Persistence.Migrations
                 table: "Patients",
                 columns: new[] { "TipoDocumento", "NumeroDocumento" },
                 unique: true);
+
+            migrationBuilder.Sql(@"
+                IF NOT EXISTS (SELECT 1 FROM dbo.Patients) AND NOT EXISTS (SELECT 1 FROM dbo.EmergencyContacts)
+                BEGIN
+                    INSERT INTO dbo.Patients
+                    (CodigoPaciente, TipoDocumento, NumeroDocumento, Nombres, Apellidos,
+                     FechaNacimiento, Sexo, EstadoCivil, Telefono, Email, Direccion, Ciudad, Pais, TipoSangre)
+                    VALUES
+                    ('PAC-0001', 'DUI', '01234567-8', 'María José',   'González López', '1990-04-12', 'F', 'Soltera', '7000-1111', 'maria.gonzalez@mail.com', 'Col. Escalón, Calle Principal #12', 'San Salvador', 'El Salvador', 'O+'),
+                    ('PAC-0002', 'DUI', '09876543-2', 'Jorge Alberto', 'Martínez Ruiz',  '1985-11-30', 'M', 'Casado',  '7000-2222', 'jorge.martinez@mail.com', 'Res. Las Flores, Pje. 3 #45',       'Soyapango',    'El Salvador', 'A+');
+
+                    INSERT INTO dbo.EmergencyContacts
+                    (PacienteID, NombreCompleto, Parentesco, Telefono, Prioridad) VALUES
+                    (1, 'Ana González',   'Madre',  '7000-1112', 1),
+                    (1, 'Pedro López',     'Esposo', '7000-1113', 2),
+                    (2, 'Rosa Ruiz',       'Esposa', '7000-2223', 1);
+                END
+            ");
         }
 
         /// <inheritdoc />
