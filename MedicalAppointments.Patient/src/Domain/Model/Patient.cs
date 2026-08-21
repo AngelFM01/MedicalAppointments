@@ -13,6 +13,8 @@ public class Patient
     public string Address { get; set; } = null!;
     public MaritalStatus MaritalStatus { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+
+    public ICollection<EmergencyContacts> EmergencyContacts { get; set; } = new List<EmergencyContacts>();
 }
 
 public enum Sex { Female = 1, Male = 2, Other = 3 }
