@@ -1,51 +1,65 @@
-using Core.Interfaces.Repository;
-using Domain.Model;
+using Core.Feature.EmergencyContacts.Commands;
+using Core.Feature.EmergencyContacts.Queries;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers;
 
 [ApiController]
-[Route("patients/{pacienteId:long}/emergency-contacts")]
-public sealed class ContactosEmergenciaController(IPatientsRepository patientsRepository, IContactosEmergenciaRepository contactsRepository) : ControllerBase
+[Route("patients/{pacienteId:long}/EmergencyContacts")]
+public sealed class ContactosEmergenciaController(IMediator mediator) : ControllerBase
 {
+    // GET /EmergencyContacts -> lista global (ruta absoluta como en el original adaptado a CQRS)
     [HttpGet("/EmergencyContacts")]
-    public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAllContacts(CancellationToken cancellationToken) =>
-        Ok(await contactsRepository.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<Domain.Model.ContactoEmergencia>>> GetAllContacts(CancellationToken cancellationToken) =>
+        Ok(await mediator.Send(new GetAllEmergencyContactsQuery(), cancellationToken));
 
+    // GET patients/{pacienteId}/EmergencyContacts
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAll(long pacienteId, CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<Domain.Model.ContactoEmergencia>>> GetAll(long pacienteId, CancellationToken cancellationToken)
     {
-        if (await patientsRepository.GetByIdAsync(pacienteId, cancellationToken) is null) return NotFound();
-        return Ok(await contactsRepository.GetByPacienteIdAsync(pacienteId, cancellationToken));
+        try
+        {
+            var result = await mediator.Send(new GetEmergencyContactsByPacienteQuery { PacienteId = pacienteId }, cancellationToken);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
+    // POST patients/{pacienteId}/EmergencyContacts
     [HttpPost]
-    public async Task<ActionResult<ContactoEmergencia>> Create(long pacienteId, ContactoEmergencia contacto, CancellationToken cancellationToken)
+    public async Task<ActionResult<Domain.Model.ContactoEmergencia>> Create(long pacienteId, [FromBody] CreateEmergencyContactCommand command, CancellationToken cancellationToken)
     {
-        if (await patientsRepository.GetByIdAsync(pacienteId, cancellationToken) is null) return NotFound();
-        contacto.ContactoEmergenciaId = 0;
-        contacto.PacienteId = pacienteId;
-        await contactsRepository.AddAsync(contacto, cancellationToken);
-        return CreatedAtAction(nameof(GetAll), new { pacienteId }, contacto);
+        command.PacienteId = pacienteId;
+        try
+        {
+            var contacto = await mediator.Send(command, cancellationToken);
+            return CreatedAtAction(nameof(GetAll), new { pacienteId }, contacto);
+        }
+        catch (KeyNotFoundException)
+        {
+            return NotFound();
+        }
     }
 
+    // PUT patients/{pacienteId}/EmergencyContacts/{contactoEmergenciaId}
     [HttpPut("{contactoEmergenciaId:long}")]
-    public async Task<IActionResult> Update(long pacienteId, long contactoEmergenciaId, ContactoEmergencia contacto, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(long pacienteId, long contactoEmergenciaId, [FromBody] UpdateEmergencyContactCommand command, CancellationToken cancellationToken)
     {
-        var existing = await contactsRepository.GetByIdAsync(contactoEmergenciaId, cancellationToken);
-        if (existing is null || existing.PacienteId != pacienteId) return NotFound();
-        contacto.ContactoEmergenciaId = contactoEmergenciaId;
-        contacto.PacienteId = pacienteId;
-        await contactsRepository.UpdateAsync(contacto, cancellationToken);
-        return NoContent();
+        command.PacienteId = pacienteId;
+        command.ContactoEmergenciaId = contactoEmergenciaId;
+        var updated = await mediator.Send(command, cancellationToken);
+        return updated ? NoContent() : NotFound();
     }
 
+    // DELETE patients/{pacienteId}/EmergencyContacts/{contactoEmergenciaId}
     [HttpDelete("{contactoEmergenciaId:long}")]
     public async Task<IActionResult> Delete(long pacienteId, long contactoEmergenciaId, CancellationToken cancellationToken)
     {
-        var existing = await contactsRepository.GetByIdAsync(contactoEmergenciaId, cancellationToken);
-        return existing is null || existing.PacienteId != pacienteId
-            ? NotFound()
-            : await contactsRepository.DeleteAsync(contactoEmergenciaId, cancellationToken) ? NoContent() : NotFound();
+        var deleted = await mediator.Send(new DeleteEmergencyContactCommand { PacienteId = pacienteId, ContactoEmergenciaId = contactoEmergenciaId }, cancellationToken);
+        return deleted ? NoContent() : NotFound();
     }
 }
