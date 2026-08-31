@@ -11,17 +11,16 @@ namespace Api.Controllers;
 public sealed class PacientesController(IRepository<Paciente> patientsRepository) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Domain.Model.Paciente>>> GetAll(CancellationToken cancellationToken)
-    {
-        var result = await mediator.Send(new GetPacientesQuery(), cancellationToken);
-        return Ok(result);
-    } //IReadOnlyList para evitar modifique desde el controlador, cancellationToken elimina si se interrumpe la solicitud.
+    public async Task<ActionResult<IReadOnlyList<Paciente>>> GetAll(CancellationToken cancellationToken) =>
+        Ok(await patientsRepository.GetByFilterAsync(p => p.Activo == true, cancellationToken: cancellationToken));
 
     [HttpGet("{pacienteId:long}")]
-    public async Task<ActionResult<Domain.Model.Paciente>> GetById(long pacienteId, CancellationToken cancellationToken)
+    public async Task<ActionResult<Paciente>> GetById(long pacienteId, CancellationToken cancellationToken)
     {
-        var paciente = await mediator.Send(new GetPacienteByIdQuery { PacienteId = pacienteId }, cancellationToken);
-        return paciente is null ? NotFound() : Ok(paciente);
+        var paciente = await patientsRepository.GetByIdAsync(pacienteId, cancellationToken);
+        if (paciente == null || !await patientsRepository.ExistsAsync(p => p.PacienteId == pacienteId, cancellationToken))
+            return NotFound();
+        return Ok(paciente);
     }
 
     [HttpPost("Create")]
@@ -51,22 +50,63 @@ public sealed class PacientesController(IRepository<Paciente> patientsRepository
     }
 
     [HttpPut("{pacienteId:long}")]
-    public async Task<IActionResult> Update(long pacienteId, [FromBody] UpdatePacienteCommand command, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(long pacienteId, Paciente paciente, CancellationToken cancellationToken)
     {
+        // 1. Obtener la entidad existente (ya rastreada por el contexto)
         var existing = await patientsRepository.GetByIdAsync(pacienteId, cancellationToken);
-        if (existing is null) return NotFound();
-        if (await patientsRepository.ExistsAsync(p => p.TipoDocumento == paciente.TipoDocumento && p.NumeroDocumento == paciente.NumeroDocumento && p.PacienteId != pacienteId, cancellationToken: cancellationToken))
-            return Conflict(new ProblemDetails { Detail = "Ya existe un paciente con este tipo y número de documento.", Status = StatusCodes.Status409Conflict });
+        if (existing is null)
+            return NotFound();
 
-        paciente.PacienteId = pacienteId;
-        paciente.FechaRegistro = existing.FechaRegistro;
-        await patientsRepository.UpdateAsync(paciente, cancellationToken);
+        // 2. Validar duplicado de documento (excluyendo el propio registro)
+        if (await patientsRepository.ExistsAsync(p => p.TipoDocumento == paciente.TipoDocumento
+                                                      && p.NumeroDocumento == paciente.NumeroDocumento
+                                                      && p.PacienteId != pacienteId, cancellationToken))
+            return Conflict(new ProblemDetails
+            {
+                Detail = "Ya existe un paciente con este tipo y número de documento.",
+                Status = StatusCodes.Status409Conflict
+            });
+
+        // 3. Mapear los valores del DTO (o entidad recibida) al objeto rastreado
+        existing.CodigoPaciente = paciente.CodigoPaciente;
+        existing.TipoDocumento = paciente.TipoDocumento;
+        existing.NumeroDocumento = paciente.NumeroDocumento;
+        existing.Nombres = paciente.Nombres;
+        existing.Apellidos = paciente.Apellidos;
+        existing.FechaNacimiento = paciente.FechaNacimiento;
+        existing.Sexo = paciente.Sexo;
+        existing.EstadoCivil = paciente.EstadoCivil;
+        existing.Telefono = paciente.Telefono;
+        existing.TelefonoSecundario = paciente.TelefonoSecundario;
+        existing.Email = paciente.Email;
+        existing.Direccion = paciente.Direccion;
+        existing.Ciudad = paciente.Ciudad;
+        existing.Pais = paciente.Pais;
+        existing.Ocupacion = paciente.Ocupacion;
+        existing.TipoSangre = paciente.TipoSangre;
+        existing.Activo = paciente.Activo;
+        
+
+        // 4. Guardar cambios (el contexto ya rastrea `existing`)
+        await patientsRepository.UpdateAsync(existing, cancellationToken);
+
         return NoContent();
     }
 
     [HttpDelete("{pacienteId:long}")]
-    public async Task<IActionResult> Delete(long pacienteId, CancellationToken cancellationToken) =>
-        await patientsRepository.DeleteAsync(pacienteId, cancellationToken) ? NoContent() : NotFound();
+    public async Task<IActionResult> Delete(long pacienteId, CancellationToken cancellationToken)
+    {
+        
+        var paciente = await patientsRepository.GetByIdAsync(pacienteId, cancellationToken);
+        if (paciente is null)
+            return NotFound();
+
+        // 2. Soft Delete: marcar como inactivo
+        paciente.Activo = false;        
+        await patientsRepository.UpdateAsync(paciente, cancellationToken);
+
+        return NoContent();
+    }
 
 
 }

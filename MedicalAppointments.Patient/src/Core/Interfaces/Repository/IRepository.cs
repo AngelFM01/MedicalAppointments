@@ -19,7 +19,7 @@ namespace Core.Interfaces.Repository
         //Comandos
         Task<bool> DeleteAsync(long id, CancellationToken cancellationToken);
         Task AddAsync(T entity, CancellationToken cancellationToken);
-        Task UpdateAsync(T entity, CancellationToken cancellationToken);
+        Task<bool> UpdateAsync(T entity, CancellationToken cancellationToken);
         Task<string> GenerateNextCodigoAsync(CancellationToken cancellationToken);
 
     }

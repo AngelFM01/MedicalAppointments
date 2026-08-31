@@ -9,20 +9,20 @@ using System.Threading.Tasks;
 
 namespace Core.Feature.EmergencyContacts.Queries
 {
-    public class GetAllEmergencyContactsQuery : IRequest<IReadOnlyList<ContactoEmergencia>> { }
+    public sealed class GetAllEmergencyContactsQuery : IRequest<IReadOnlyList<ContactoEmergencia>> { }
 
-    public class GetAllEmergencyContactsQueryHandler(IRepository<ContactoEmergencia> contactsRepository) : IRequestHandler<GetAllEmergencyContactsQuery, IReadOnlyList<ContactoEmergencia>>
+    public sealed class GetAllEmergencyContactsQueryHandler(IRepository<ContactoEmergencia> contactsRepository) : IRequestHandler<GetAllEmergencyContactsQuery, IReadOnlyList<ContactoEmergencia>>
     {
         public Task<IReadOnlyList<ContactoEmergencia>> Handle(GetAllEmergencyContactsQuery request, CancellationToken cancellationToken)
             => contactsRepository.GetAllAsync(cancellationToken);
     }
 
-    public class GetEmergencyContactsByPacienteQuery : IRequest<IReadOnlyList<ContactoEmergencia>>
+    public sealed class GetEmergencyContactsByPacienteQuery : IRequest<IReadOnlyList<ContactoEmergencia>>
     {
         public long PacienteId { get; set; }
     }
 
-    public class GetEmergencyContactsByPacienteQueryHandler(
+    public sealed class GetEmergencyContactsByPacienteQueryHandler(
         IRepository<Paciente> patientsRepository,
         IRepository<ContactoEmergencia> contactsRepository) : IRequestHandler<GetEmergencyContactsByPacienteQuery, IReadOnlyList<ContactoEmergencia>>
     {

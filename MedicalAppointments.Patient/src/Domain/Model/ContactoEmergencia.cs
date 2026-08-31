@@ -4,7 +4,9 @@ namespace Domain.Model;
 
 public class ContactoEmergencia
 {
+    
     public long ContactoEmergenciaId { get; set; }
+    
     public long PacienteId { get; set; }
     public string NombreCompleto { get; set; } = null!;
     public string? Parentesco { get; set; }

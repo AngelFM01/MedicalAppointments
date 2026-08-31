@@ -4,9 +4,8 @@ namespace Domain.Model;
 
 public class Paciente
 {
-    [JsonIgnore]
+    
     public long PacienteId { get; set; } = 0;
-    [JsonIgnore]
     public string? CodigoPaciente { get; set; } = null!;
     public string TipoDocumento { get; set; } = null!;
     public string NumeroDocumento { get; set; } = null!;

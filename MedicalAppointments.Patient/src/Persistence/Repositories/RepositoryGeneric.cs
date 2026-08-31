@@ -21,10 +21,19 @@ namespace Persistence.Repositories
             _context = context;
         }
 
+        //Comandos
+
         public async Task AddAsync(T entity, CancellationToken cancellationToken)
         {
             await _context.Set<T>().AddAsync(entity, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
+        }
+
+        public async Task<bool> UpdateAsync(T entity, CancellationToken cancellationToken)
+        {
+            _context.Set<T>().Update(entity);
+            await _context.SaveChangesAsync(cancellationToken);
+            return true;
         }
 
         public async Task<bool> DeleteAsync(long id, CancellationToken cancellationToken)
@@ -38,29 +47,13 @@ namespace Persistence.Repositories
             return true;    
         }
 
+        //Consultas
         public async Task<bool> ExistsAsync(Expression<Func<T, bool>> predicate, CancellationToken cancellationToken = default)
         {
             return await _context.Set<T>().AnyAsync(predicate, cancellationToken);
         }
 
-        public async Task<string> GenerateNextCodigoAsync(CancellationToken cancellationToken)
-        {
-            // Obtener el último código numérico
-            var last = await _context.Set<Paciente>()
-                .OrderByDescending(p => p.CodigoPaciente)
-                .Select(p => p.CodigoPaciente)
-                .FirstOrDefaultAsync(cancellationToken);
-
-            int nextNumber = 1;
-            if (!string.IsNullOrEmpty(last))
-            {
-                var parts = last.Split('-');
-                if (parts.Length == 2 && int.TryParse(parts[1], out int num))
-                    nextNumber = num + 1;
-            }
-
-            return $"PAC-{nextNumber:D4}"; // PAC-0001, PAC-0002, ...
-        }
+        
 
         public async Task<IReadOnlyList<T>> GetAllAsync(CancellationToken cancellationToken)
         {
@@ -82,10 +75,25 @@ namespace Persistence.Repositories
             return result;
         }
 
-        public async Task UpdateAsync(T entity, CancellationToken cancellationToken)
+        public async Task<string> GenerateNextCodigoAsync(CancellationToken cancellationToken)
         {
-            _context.Set<T>().Update(entity);
-            await _context.SaveChangesAsync(cancellationToken);
+            // Obtener el último código numérico
+            var last = await _context.Set<Paciente>()
+                .OrderByDescending(p => p.CodigoPaciente)
+                .Select(p => p.CodigoPaciente)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            int nextNumber = 1;
+            if (!string.IsNullOrEmpty(last))
+            {
+                var parts = last.Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[1], out int num))
+                    nextNumber = num + 1;
+            }
+
+            return $"PAC-{nextNumber:D4}"; // PAC-0001, PAC-0002, ...
         }
+
+
     }
 }
