@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Model;
 
 public class ContactoEmergencia
@@ -11,5 +13,6 @@ public class ContactoEmergencia
     public string? Email { get; set; }
     public int Prioridad { get; set; } = 1;
     public bool Activo { get; set; } = true;
-    public Paciente Paciente { get; set; } = null!;
+    [JsonIgnore]
+    public Paciente? Paciente { get; set; }
 }

@@ -6,7 +6,7 @@ namespace Api.Controllers;
 
 [ApiController]
 [Route("patients/{pacienteId:long}/emergency-contacts")]
-public sealed class ContactosEmergenciaController(IPatientsRepository patientsRepository, IContactosEmergenciaRepository contactsRepository) : ControllerBase
+public sealed class ContactosEmergenciaController(IRepository<Paciente> patientsRepository, IRepository<ContactoEmergencia> contactsRepository) : ControllerBase
 {
     [HttpGet("/EmergencyContacts")]
     public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAllContacts(CancellationToken cancellationToken) =>
@@ -16,7 +16,7 @@ public sealed class ContactosEmergenciaController(IPatientsRepository patientsRe
     public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAll(long pacienteId, CancellationToken cancellationToken)
     {
         if (await patientsRepository.GetByIdAsync(pacienteId, cancellationToken) is null) return NotFound();
-        return Ok(await contactsRepository.GetByPacienteIdAsync(pacienteId, cancellationToken));
+        return Ok(await contactsRepository.GetByFilterAsync(c => c.PacienteId == pacienteId, cancellationToken: cancellationToken));
     }
 
     [HttpPost]

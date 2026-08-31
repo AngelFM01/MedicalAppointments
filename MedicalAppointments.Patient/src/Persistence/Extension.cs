@@ -17,6 +17,7 @@ public static class Extension
         services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
         services.AddScoped<IPatientsRepository, PatientsRepository>();
         services.AddScoped<IContactosEmergenciaRepository, ContactosEmergenciaRepository>();
+        services.AddScoped(typeof(IRepository<>), typeof(RepositoryGeneric<>));
         return services;
     }
 }

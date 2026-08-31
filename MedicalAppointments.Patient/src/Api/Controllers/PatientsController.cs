@@ -1,12 +1,14 @@
+using Azure.Core;
 using Core.Interfaces.Repository;
 using Domain.Model;
 using Microsoft.AspNetCore.Mvc;
+using System.Linq;
 
 namespace Api.Controllers;
 
 [ApiController]
-[Route("patients")]
-public sealed class PacientesController(IPatientsRepository patientsRepository) : ControllerBase
+[Route("c")]
+public sealed class PacientesController(IRepository<Paciente> patientsRepository) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<Paciente>>> GetAll(CancellationToken cancellationToken) =>
@@ -19,14 +21,28 @@ public sealed class PacientesController(IPatientsRepository patientsRepository) 
         return paciente is null ? NotFound() : Ok(paciente);
     }
 
-    [HttpPost]
+    [HttpPost("Create")]
     public async Task<ActionResult<Paciente>> Create(Paciente paciente, CancellationToken cancellationToken)
     {
-        if (await patientsRepository.ExistsByDocumentAsync(paciente.TipoDocumento, paciente.NumeroDocumento, cancellationToken: cancellationToken))
+        //Validacion del documento del paciente para evitar duplicados
+        if (await patientsRepository.ExistsAsync(p => p.TipoDocumento == paciente.TipoDocumento && p.NumeroDocumento == paciente.NumeroDocumento, cancellationToken: cancellationToken))
             return Conflict(new ProblemDetails { Detail = "Ya existe un paciente con este tipo y número de documento.", Status = StatusCodes.Status409Conflict });
 
-        paciente.PacienteId = 0;
-        paciente.FechaRegistro = default;
+        // Validación y generación automática de código
+        if (string.IsNullOrWhiteSpace(paciente.CodigoPaciente))
+        {
+            // Si no viene código, lo generamos desde el repositorio
+            paciente.CodigoPaciente = await patientsRepository.GenerateNextCodigoAsync(cancellationToken);
+        }
+        else
+        {
+            // Si viene código, validamos que no exista
+            if (await patientsRepository.ExistsAsync(p => p.CodigoPaciente == paciente.CodigoPaciente, cancellationToken))
+                return Conflict(new ProblemDetails { Detail = "Ya existe un paciente con este código.", Status = StatusCodes.Status409Conflict });
+        }
+
+        paciente.PacienteId = 0;        
+        paciente.FechaRegistro = DateTime.UtcNow;
         await patientsRepository.AddAsync(paciente, cancellationToken);
         return CreatedAtAction(nameof(GetById), new { pacienteId = paciente.PacienteId }, paciente);
     }
@@ -36,7 +52,7 @@ public sealed class PacientesController(IPatientsRepository patientsRepository) 
     {
         var existing = await patientsRepository.GetByIdAsync(pacienteId, cancellationToken);
         if (existing is null) return NotFound();
-        if (await patientsRepository.ExistsByDocumentAsync(paciente.TipoDocumento, paciente.NumeroDocumento, pacienteId, cancellationToken))
+        if (await patientsRepository.ExistsAsync(p => p.TipoDocumento == paciente.TipoDocumento && p.NumeroDocumento == paciente.NumeroDocumento && p.PacienteId != pacienteId, cancellationToken: cancellationToken))
             return Conflict(new ProblemDetails { Detail = "Ya existe un paciente con este tipo y número de documento.", Status = StatusCodes.Status409Conflict });
 
         paciente.PacienteId = pacienteId;
@@ -48,4 +64,6 @@ public sealed class PacientesController(IPatientsRepository patientsRepository) 
     [HttpDelete("{pacienteId:long}")]
     public async Task<IActionResult> Delete(long pacienteId, CancellationToken cancellationToken) =>
         await patientsRepository.DeleteAsync(pacienteId, cancellationToken) ? NoContent() : NotFound();
+
+
 }
