@@ -11,13 +11,16 @@ namespace Api.Controllers;
 public sealed class PacientesController(IRepository<Paciente> patientsRepository) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<Paciente>>> GetAll(CancellationToken cancellationToken) =>
-        Ok(await patientsRepository.GetAllAsync(cancellationToken));
+    public async Task<ActionResult<IReadOnlyList<Domain.Model.Paciente>>> GetAll(CancellationToken cancellationToken)
+    {
+        var result = await mediator.Send(new GetPacientesQuery(), cancellationToken);
+        return Ok(result);
+    } //IReadOnlyList para evitar modifique desde el controlador, cancellationToken elimina si se interrumpe la solicitud.
 
     [HttpGet("{pacienteId:long}")]
-    public async Task<ActionResult<Paciente>> GetById(long pacienteId, CancellationToken cancellationToken)
+    public async Task<ActionResult<Domain.Model.Paciente>> GetById(long pacienteId, CancellationToken cancellationToken)
     {
-        var paciente = await patientsRepository.GetByIdAsync(pacienteId, cancellationToken);
+        var paciente = await mediator.Send(new GetPacienteByIdQuery { PacienteId = pacienteId }, cancellationToken);
         return paciente is null ? NotFound() : Ok(paciente);
     }
 
@@ -48,7 +51,7 @@ public sealed class PacientesController(IRepository<Paciente> patientsRepository
     }
 
     [HttpPut("{pacienteId:long}")]
-    public async Task<IActionResult> Update(long pacienteId, Paciente paciente, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(long pacienteId, [FromBody] UpdatePacienteCommand command, CancellationToken cancellationToken)
     {
         var existing = await patientsRepository.GetByIdAsync(pacienteId, cancellationToken);
         if (existing is null) return NotFound();

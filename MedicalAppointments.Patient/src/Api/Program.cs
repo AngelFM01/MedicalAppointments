@@ -1,3 +1,5 @@
+using Core;
+using Externals;
 using Persistence;
 using Persistence.Data;
 using Microsoft.EntityFrameworkCore;
@@ -6,8 +8,11 @@ using Scalar.AspNetCore;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddOpenApi();
+
+builder.Services.AddCore();
+builder.Services.AddPersistence();
+builder.Services.AddExternals();
 
 var app = builder.Build();
 
