@@ -1,9 +1,12 @@
+using System.Text.Json.Serialization;
+
 namespace Domain.Model;
 
 public class Paciente
 {
-    public long PacienteId { get; set; }
-    public string CodigoPaciente { get; set; } = null!;
+    
+    public long PacienteId { get; set; } = 0;
+    public string? CodigoPaciente { get; set; } = null!;
     public string TipoDocumento { get; set; } = null!;
     public string NumeroDocumento { get; set; } = null!;
     public string Nombres { get; set; } = null!;
@@ -20,6 +23,8 @@ public class Paciente
     public string? Ocupacion { get; set; }
     public string? TipoSangre { get; set; }
     public bool Activo { get; set; } = true;
-    public DateTime FechaRegistro { get; set; }
-    public ICollection<ContactoEmergencia> ContactosEmergencia { get; set; } = new List<ContactoEmergencia>();
+    [JsonIgnore]
+    public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
+    [JsonIgnore]
+    public ICollection<ContactoEmergencia>? ContactosEmergencia { get; set; } = new List<ContactoEmergencia>();
 }

@@ -1,15 +1,21 @@
-using Core.Interfaces.Repository;
+﻿using Core.Interfaces.Repository;
 using MediatR;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Core.Feature.Patients.Commands;
-
-public sealed class DeletePacienteCommand : IRequest<bool>
+namespace Core.Feature.Patients.Commands
 {
-    public long PacienteId { get; set; }
-}
+    public class DeletePacienteCommand : IRequest<bool>
+    {
+        public long PacienteId { get; set; }
+    }
 
-public sealed class DeletePacienteCommandHandler(IPatientsRepository patientsRepository) : IRequestHandler<DeletePacienteCommand, bool>
-{
-    public Task<bool> Handle(DeletePacienteCommand request, CancellationToken cancellationToken)
-        => patientsRepository.DeleteAsync(request.PacienteId, cancellationToken);
+    public class DeletePacienteCommandHandler(IPatientsRepository patientsRepository) : IRequestHandler<DeletePacienteCommand, bool>
+    {
+        public Task<bool> Handle(DeletePacienteCommand request, CancellationToken cancellationToken)
+            => patientsRepository.DeleteAsync(request.PacienteId, cancellationToken);
+    }
 }

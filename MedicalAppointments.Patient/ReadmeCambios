@@ -1,0 +1,1 @@
+se agrego patron de repositorio generico para ambas tablas, se agrego implemento el CQRS para consultas y lecturas en los endpoints, utiliando el patron repositorio generico.
