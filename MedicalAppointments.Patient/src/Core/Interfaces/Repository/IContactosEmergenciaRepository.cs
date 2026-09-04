@@ -1,13 +1,20 @@
+using Core.Interfaces.Persistence;
 using Domain.Model;
 
 namespace Core.Interfaces.Repository;
 
-public interface IContactosEmergenciaRepository
+/// <summary>
+/// Repositorio de <see cref="ContactoEmergencia"/>. Hereda el CRUD genérico de
+/// <see cref="IGenericRepository{TEntity, TKey}"/> y añade sólo lo específico del contacto.
+/// </summary>
+public interface IContactosEmergenciaRepository : IGenericRepository<ContactoEmergencia, long>
 {
-    Task<IReadOnlyList<ContactoEmergencia>> GetAllAsync(CancellationToken cancellationToken = default);
+    /// <summary>Devuelve los contactos de un paciente, ordenados por prioridad.</summary>
     Task<IReadOnlyList<ContactoEmergencia>> GetByPacienteIdAsync(long pacienteId, CancellationToken cancellationToken = default);
-    Task<ContactoEmergencia?> GetByIdAsync(long contactoEmergenciaId, CancellationToken cancellationToken = default);
-    Task AddAsync(ContactoEmergencia contacto, CancellationToken cancellationToken = default);
+
+    /// <summary>Modificación con guardado inmediato (compatibilidad con los handlers actuales).</summary>
     Task UpdateAsync(ContactoEmergencia contacto, CancellationToken cancellationToken = default);
+
+    /// <summary>Baja por Id con guardado inmediato. Devuelve <c>false</c> si el contacto no existe.</summary>
     Task<bool> DeleteAsync(long contactoEmergenciaId, CancellationToken cancellationToken = default);
 }

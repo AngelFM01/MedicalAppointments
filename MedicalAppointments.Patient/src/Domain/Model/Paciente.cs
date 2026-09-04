@@ -1,8 +1,16 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using Domain.Abstractions;
+
 namespace Domain.Model;
 
-public class Paciente
+public class Paciente : IEntity<long>
 {
     public long PacienteId { get; set; }
+
+    /// <summary>Alias genérico de la clave primaria exigido por <see cref="IEntity{TKey}"/>.
+    /// No se mapea a columna: el repositorio genérico resuelve la clave real por metadatos de EF Core.</summary>
+    [NotMapped]
+    public long Id => PacienteId;
     public string CodigoPaciente { get; set; } = null!;
     public string TipoDocumento { get; set; } = null!;
     public string NumeroDocumento { get; set; } = null!;
