@@ -2,14 +2,16 @@ using System.Linq.Expressions;
 using Core.Interfaces.Persistence;
 using Domain.Abstractions;
 using Microsoft.EntityFrameworkCore;
-using Persistence.Data;
 
-namespace Persistence.Repositories.Generic;
+namespace Persistence.Generic;
 
 /// <summary>
 /// Implementación única y reutilizable de <see cref="IGenericRepository{TEntity, TKey}"/> sobre EF Core.
-/// Resuelve el <see cref="DbSet{TEntity}"/> dinámicamente con <c>context.Set&lt;TEntity&gt;()</c>, por lo
-/// que da servicio a cualquier entidad registrada en <see cref="AppDbContext"/> sin escribir más código.
+/// Depende únicamente de <see cref="DbContext"/> (no de un <c>DbContext</c> concreto de la aplicación),
+/// por lo que esta clase vive en una biblioteca de persistencia independiente y puede reutilizarse en
+/// cualquier proyecto que tenga su propio <see cref="DbContext"/>. Resuelve el <see cref="DbSet{TEntity}"/>
+/// dinámicamente con <c>context.Set&lt;TEntity&gt;()</c>, por lo que da servicio a cualquier entidad
+/// <see cref="IEntity{TKey}"/> registrada en el modelo, sin escribir código adicional.
 /// Los métodos son <c>virtual</c> para permitir que un repositorio concreto ajuste comportamientos puntuales
 /// (por ejemplo el ordenamiento por defecto de <see cref="GetAllAsync"/>).
 /// </summary>
@@ -20,7 +22,7 @@ public class GenericRepository<TEntity, TKey> : IGenericRepository<TEntity, TKey
     where TKey : notnull
 {
     /// <summary>Contexto EF Core compartido (inyectado con ciclo de vida Scoped).</summary>
-    protected AppDbContext Context { get; }
+    protected DbContext Context { get; }
 
     /// <summary>Conjunto tipado de la entidad gestionada.</summary>
     protected DbSet<TEntity> Set => Context.Set<TEntity>();
@@ -28,7 +30,7 @@ public class GenericRepository<TEntity, TKey> : IGenericRepository<TEntity, TKey
     /// <summary>Nombre real de la columna/propiedad clave, resuelto por metadatos del modelo.</summary>
     private readonly string _keyName;
 
-    public GenericRepository(AppDbContext context)
+    public GenericRepository(DbContext context)
     {
         Context = context;
         _keyName = context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey()?.Properties[0].Name

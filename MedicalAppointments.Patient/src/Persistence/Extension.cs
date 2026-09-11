@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Persistence.Data;
+using Persistence.Generic;
 using Persistence.Repositories;
-using Persistence.Repositories.Generic;
 
 namespace Persistence;
 
@@ -29,7 +29,11 @@ public static class Extension
 
         services.AddDbContext<AppDbContext>(options => options.UseSqlServer(connectionString));
 
-        // Patrón genérico: una sola implementación para el CRUD de cualquier entidad IEntity<TKey>.
+        // GenericRepository<,> (biblioteca Persistence.Generic) depende de DbContext, no de AppDbContext,
+        // para poder reutilizarse con cualquier contexto EF Core. Se expone aquí el mismo AppDbContext como DbContext.
+        services.AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>());
+
+        // Patrón genérico: una sola implementación (Persistence.Generic) para el CRUD de cualquier entidad IEntity<TKey>.
         services.AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>));
 
         // Repositorios concretos (heredan del genérico y añaden consultas específicas).

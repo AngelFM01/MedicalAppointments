@@ -7,6 +7,7 @@
   </Folder>
   <Folder Name="/C.Persistence/">
     <Project Path="src/Persistence/Persistence.csproj" />
+    <Project Path="src/Persistence.Generic/Persistence.Generic.csproj" />
   </Folder>
   <Folder Name="/D.Externals/">
     <Project Path="src/Externals/Externals.csproj" />

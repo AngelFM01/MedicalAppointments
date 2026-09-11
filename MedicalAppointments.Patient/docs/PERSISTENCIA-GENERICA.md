@@ -1,89 +1,77 @@
 # Base técnica de persistencia con patrón genérico (Repository + Specification)
 
 > Módulo: `MedicalAppointments.Patient`
-> Fecha: 2026-09-03
-> Objetivo: proveer la base de algoritmos para la gestión de persistencia donde **todas las
-> operaciones CRUD se realizan sobre objetos genéricos**, evitando reescribir el mismo
-> acceso a datos para cada entidad.
+> Fecha: 2026-09-11
+> Objetivo: proveer, como **proyecto de biblioteca de clases independiente**, la base de
+> algoritmos para la gestión de persistencia donde **todas las operaciones CRUD se realizan
+> sobre objetos genéricos**, evitando reescribir el mismo acceso a datos para cada entidad.
 
 ---
 
 ## 1. Resumen de la solución
 
-Se implementó una **biblioteca de persistencia genérica** distribuida en dos capas ya
-existentes de la arquitectura limpia del módulo:
+Se agregó un **proyecto de tipo biblioteca de clases** nuevo, `Persistence.Generic`
+(`src/Persistence.Generic/Persistence.Generic.csproj`), que contiene el algoritmo de
+persistencia genérica sobre EF Core. Es un proyecto propio (no una carpeta dentro de
+`Persistence`): tiene su propio `.csproj`, su propia entrada en el `.slnx` y sólo depende de
+`Core` (por los contratos) y del paquete `Microsoft.EntityFrameworkCore` — **no** depende de
+`AppDbContext` ni de SQL Server, por lo que es reutilizable desde cualquier proyecto que tenga
+su propio `DbContext`.
 
-| Capa | Proyecto | Contenido nuevo |
-|------|----------|-----------------|
-| Dominio | `src/Domain` | Contrato `IEntity<TKey>` (marca de entidad genérica). |
-| Core (aplicación) | `src/Core` | Contratos `IGenericRepository<TEntity,TKey>`, `ISpecification<TEntity>` y `BaseSpecification<TEntity>`. |
-| Persistencia | `src/Persistence` | Implementaciones `GenericRepository<TEntity,TKey>`, `SpecificationEvaluator<TEntity>` y registro en DI. |
+| Capa / Proyecto | Contenido |
+|------|-----------|
+| Dominio — `src/Domain` | Contrato `IEntity<TKey>` (marca de entidad genérica). |
+| Core (aplicación) — `src/Core` | Contratos `IGenericRepository<TEntity,TKey>`, `ISpecification<TEntity>` y `BaseSpecification<TEntity>`. |
+| **Persistence.Generic (biblioteca de clases nueva)** — `src/Persistence.Generic` | Algoritmo: `GenericRepository<TEntity,TKey>` y `SpecificationEvaluator<TEntity>`. |
+| Persistencia de la app — `src/Persistence` | Referencia a `Persistence.Generic`; sólo aporta `AppDbContext`, configuraciones EF, migraciones, repositorios concretos y el registro en DI. |
 
-Con esto, dar de alta un repositorio para una entidad nueva **no requiere escribir código**:
-basta con que la entidad implemente `IEntity<TKey>` y esté mapeada en `AppDbContext`.
+Diagrama de dependencias (flechas = "referencia a"):
+
+```
+Api ──> Persistence ──> Persistence.Generic ──> Core ──> Domain
+                 └────────────────────────────────┘
+        (Persistence también referencia Core directamente)
+```
+
+Con esto, dar de alta un repositorio para una entidad nueva **no requiere escribir código**
+de acceso a datos: basta con que la entidad implemente `IEntity<TKey>` y esté mapeada en el
+`DbContext` de turno.
 
 ---
 
-## 2. Clases e interfaces agregadas
+## 2. El proyecto de biblioteca `Persistence.Generic`
 
-### 2.1 `Domain.Abstractions.IEntity<TKey>`
-`src/Domain/Abstractions/IEntity.cs`
+`src/Persistence.Generic/Persistence.Generic.csproj`
 
-```csharp
-public interface IEntity<out TKey> where TKey : notnull
-{
-    TKey Id { get; }
-}
+```xml
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Core\Core.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.19" />
+  </ItemGroup>
+</Project>
 ```
 
-- Marca genérica que identifica a cualquier entidad persistible por su clave primaria.
-- Se usa como **restricción de tipo** (`where TEntity : class, IEntity<TKey>`) en el
-  repositorio genérico.
-- `TKey` es libre: `long`, `int`, `Guid`, `string`, etc.
+Añadido al solution file `MedicalAppointments.Patient.slnx` dentro de la carpeta
+`/C.Persistence/`, junto al proyecto `Persistence`.
 
-### 2.2 `Core.Interfaces.Persistence.IGenericRepository<TEntity, TKey>`
-`src/Core/Interfaces/Persistence/IGenericRepository.cs`
-
-Contrato CRUD completo sobre objetos genéricos. Métodos:
-
-| Grupo | Firma | Descripción |
-|-------|-------|-------------|
-| Read | `Task<TEntity?> GetByIdAsync(TKey id, CancellationToken)` | Busca por clave primaria, sin *tracking*. |
-| Read | `Task<TEntity?> FirstOrDefaultAsync(Expression<Func<TEntity,bool>>, CancellationToken)` | Primer elemento que cumple el predicado. |
-| Read | `Task<IReadOnlyList<TEntity>> GetAllAsync(CancellationToken)` | Todas las entidades. |
-| Read | `Task<IReadOnlyList<TEntity>> ListAsync(Expression<Func<TEntity,bool>>, CancellationToken)` | Filtrado por predicado. |
-| Read | `Task<IReadOnlyList<TEntity>> ListAsync(ISpecification<TEntity>, CancellationToken)` | Filtrado + includes + orden + paginación declarativos. |
-| Read | `Task<bool> ExistsAsync(Expression<Func<TEntity,bool>>, CancellationToken)` | Existencia (`ANY`). |
-| Read | `Task<int> CountAsync(Expression<Func<TEntity,bool>>?, CancellationToken)` | Conteo total o filtrado. |
-| Create | `Task<TEntity> AddAsync(TEntity, CancellationToken)` | Marca para inserción. |
-| Create | `Task AddRangeAsync(IEnumerable<TEntity>, CancellationToken)` | Inserción masiva. |
-| Update | `TEntity Update(TEntity)` | Marca como modificada. |
-| Delete | `void Remove(TEntity)` / `void RemoveRange(IEnumerable<TEntity>)` | Marca para eliminación. |
-| Delete | `Task<bool> RemoveByIdAsync(TKey id, CancellationToken)` | Carga por clave y marca para eliminación; `false` si no existe. |
-| Persist | `Task<int> SaveChangesAsync(CancellationToken)` | Confirma los cambios pendientes. |
-
-> Las operaciones de escritura **no** persisten hasta `SaveChangesAsync`. Como el `AppDbContext`
-> y el repositorio genérico se registran con ciclo de vida *Scoped*, dentro de una misma
-> petición todos los repositorios comparten el mismo contexto: basta un `SaveChangesAsync`
-> para confirmar en bloque los cambios de varias entidades.
-
-### 2.3 `Core.Interfaces.Persistence.ISpecification<TEntity>` + `BaseSpecification<TEntity>`
-`src/Core/Interfaces/Persistence/ISpecification.cs`, `BaseSpecification.cs`
-
-Patrón *Specification*: describe una consulta reutilizable (criterio, `Includes`,
-`OrderBy` / `OrderByDescending`, `Skip` / `Take`, `AsNoTracking`).
-`BaseSpecification<TEntity>` es la clase base; las especificaciones concretas heredan y
-componen la consulta con métodos protegidos: `Where`, `AddInclude`, `ApplyOrderBy`,
-`ApplyOrderByDescending`, `ApplyPaging`, `EnableTracking`.
-
-### 2.4 `Persistence.Repositories.Generic.GenericRepository<TEntity, TKey>`
-`src/Persistence/Repositories/Generic/GenericRepository.cs`
+### 2.1 `Persistence.Generic.GenericRepository<TEntity, TKey>`
+`src/Persistence.Generic/GenericRepository.cs`
 
 - Implementación **única** de `IGenericRepository<TEntity,TKey>` sobre EF Core.
-- Obtiene el `DbSet<TEntity>` con `context.Set<TEntity>()`, por lo que sirve para
-  cualquier entidad sin código adicional.
+- Recibe un `Microsoft.EntityFrameworkCore.DbContext` **genérico** (no `AppDbContext`), lo
+  que hace la biblioteca independiente de cualquier aplicación concreta.
+- Obtiene el `DbSet<TEntity>` con `context.Set<TEntity>()`, por lo que sirve para cualquier
+  entidad `IEntity<TKey>` sin escribir código adicional.
 - Todos los métodos son `virtual` para que un repositorio concreto pueda ajustar un
-  comportamiento puntual (p. ej. el orden por defecto).
+  comportamiento puntual (p. ej. el orden por defecto de `GetAllAsync`).
 - Algoritmo destacado — **resolución dinámica de la clave primaria**
   (`private Expression<Func<TEntity,bool>> KeyEquals(TKey id)`):
   1. En el constructor se lee el nombre real de la propiedad clave desde los metadatos
@@ -93,25 +81,72 @@ componen la consulta con métodos protegidos: `Where`, `AddInclude`, `ApplyOrder
   3. Así `GetByIdAsync` / `RemoveByIdAsync` funcionan aunque cada entidad nombre su
      clave distinto (`PacienteId`, `ContactoEmergenciaId`, …) y sin exigir una columna `Id`.
 
-### 2.5 `Persistence.Repositories.Generic.SpecificationEvaluator<TEntity>`
-`src/Persistence/Repositories/Generic/SpecificationEvaluator.cs`
+Funciones CRUD implementadas:
+
+| Grupo | Firma | Descripción |
+|-------|-------|-------------|
+| Read | `GetByIdAsync(TKey id, CancellationToken)` | Busca por clave primaria, sin *tracking*. |
+| Read | `FirstOrDefaultAsync(Expression<Func<TEntity,bool>>, CancellationToken)` | Primer elemento que cumple el predicado. |
+| Read | `GetAllAsync(CancellationToken)` | Todas las entidades. |
+| Read | `ListAsync(Expression<Func<TEntity,bool>>, CancellationToken)` | Filtrado por predicado. |
+| Read | `ListAsync(ISpecification<TEntity>, CancellationToken)` | Filtrado + includes + orden + paginación declarativos. |
+| Read | `ExistsAsync(Expression<Func<TEntity,bool>>, CancellationToken)` | Existencia (`ANY`). |
+| Read | `CountAsync(Expression<Func<TEntity,bool>>?, CancellationToken)` | Conteo total o filtrado. |
+| Create | `AddAsync(TEntity, CancellationToken)` | Marca para inserción. |
+| Create | `AddRangeAsync(IEnumerable<TEntity>, CancellationToken)` | Inserción masiva. |
+| Update | `Update(TEntity)` | Marca como modificada. |
+| Delete | `Remove(TEntity)` / `RemoveRange(IEnumerable<TEntity>)` | Marca para eliminación. |
+| Delete | `RemoveByIdAsync(TKey id, CancellationToken)` | Carga por clave y marca para eliminación; `false` si no existe. |
+| Persist | `SaveChangesAsync(CancellationToken)` | Confirma los cambios pendientes. |
+
+### 2.2 `Persistence.Generic.SpecificationEvaluator<TEntity>`
+`src/Persistence.Generic/SpecificationEvaluator.cs`
 
 Traductor `ISpecification<TEntity>` → `IQueryable<TEntity>`. Aplica en orden:
 `AsNoTracking` → `Where` → `Include`(s) → `OrderBy`/`OrderByDescending` → `Skip` → `Take`.
 
 ---
 
-## 3. Cambios en clases existentes
+## 3. Contratos en `Core` (sin cambios de ubicación)
+
+Se mantienen en `src/Core/Interfaces/Persistence/` porque son **contratos de aplicación**
+(puertos), no implementación:
+
+- `IGenericRepository<TEntity, TKey>` — contrato CRUD genérico (implementado por
+  `Persistence.Generic.GenericRepository<,>`).
+- `ISpecification<TEntity>` / `BaseSpecification<TEntity>` — patrón *Specification* para
+  consultas reutilizables (criterio, `Includes`, `OrderBy`/`OrderByDescending`, `Skip`/`Take`,
+  `AsNoTracking`).
+
+> Las operaciones de escritura **no** persisten hasta `SaveChangesAsync`. Como el `DbContext`
+> y el repositorio genérico se registran con ciclo de vida *Scoped*, dentro de una misma
+> petición todos los repositorios comparten el mismo contexto: basta un `SaveChangesAsync`
+> para confirmar en bloque los cambios de varias entidades.
+
+`Domain.Abstractions.IEntity<TKey>` (`src/Domain/Abstractions/IEntity.cs`) tampoco se movió:
+es una marca sin dependencias, correcta en la capa de dominio.
+
+```csharp
+public interface IEntity<out TKey> where TKey : notnull
+{
+    TKey Id { get; }
+}
+```
+
+---
+
+## 4. Cambios en el proyecto `Persistence` (app-específico)
 
 | Archivo | Cambio |
 |---------|--------|
+| `src/Persistence/Persistence.csproj` | Agrega `<ProjectReference Include="..\Persistence.Generic\Persistence.Generic.csproj" />`. |
+| `src/Persistence/Repositories/PatientsRepository.cs` | Deriva de `Persistence.Generic.GenericRepository<Paciente,long>`. Sólo redefine `GetAllAsync` (orden por apellidos/nombres), implementa `ExistsByDocumentAsync` (vía `ExistsAsync` genérico) y envuelve `Add/Update/Delete` con `SaveChangesAsync` inmediato. |
+| `src/Persistence/Repositories/ContactosEmergenciaRepository.cs` | Igual criterio: deriva del genérico, sólo redefine `GetAllAsync`, agrega `GetByPacienteIdAsync` y el guardado inmediato. |
+| `src/Persistence/Extension.cs` | Registra `DbContext` → mismo `AppDbContext` (`AddScoped<DbContext>(sp => sp.GetRequiredService<AppDbContext>())`, necesario porque `GenericRepository<,>` pide `DbContext`, no `AppDbContext`), el genérico abierto `AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>))` y deduplica las dos sobrecargas de `AddPersistence`. |
+| `src/Core/Interfaces/Repository/IPatients.cs` | `IPatientsRepository` hereda de `IGenericRepository<Paciente,long>`; sólo conserva `ExistsByDocumentAsync`, `UpdateAsync`, `DeleteAsync`. |
+| `src/Core/Interfaces/Repository/IContactosEmergenciaRepository.cs` | `IContactosEmergenciaRepository` hereda de `IGenericRepository<ContactoEmergencia,long>`; sólo conserva `GetByPacienteIdAsync`, `UpdateAsync`, `DeleteAsync`. |
 | `src/Domain/Model/Paciente.cs` | Implementa `IEntity<long>`; agrega `[NotMapped] public long Id => PacienteId;`. |
 | `src/Domain/Model/ContactoEmergencia.cs` | Implementa `IEntity<long>`; agrega `[NotMapped] public long Id => ContactoEmergenciaId;`. |
-| `src/Core/Interfaces/Repository/IPatients.cs` | `IPatientsRepository` ahora hereda de `IGenericRepository<Paciente,long>`; sólo conserva `ExistsByDocumentAsync`, `UpdateAsync`, `DeleteAsync`. |
-| `src/Core/Interfaces/Repository/IContactosEmergenciaRepository.cs` | `IContactosEmergenciaRepository` hereda de `IGenericRepository<ContactoEmergencia,long>`; sólo conserva `GetByPacienteIdAsync`, `UpdateAsync`, `DeleteAsync`. |
-| `src/Persistence/Repositories/PatientsRepository.cs` | Ahora deriva de `GenericRepository<Paciente,long>`. Sólo redefine `GetAllAsync` (orden por apellidos/nombres), implementa `ExistsByDocumentAsync` (vía `ExistsAsync` genérico) y envuelve `Add/Update/Delete` con `SaveChangesAsync` inmediato. Pasó de ~38 a métodos mínimos. |
-| `src/Persistence/Repositories/ContactosEmergenciaRepository.cs` | Igual criterio: deriva del genérico, sólo redefine `GetAllAsync`, agrega `GetByPacienteIdAsync` y el guardado inmediato. |
-| `src/Persistence/Extension.cs` | Registra el genérico abierto `AddScoped(typeof(IGenericRepository<,>), typeof(GenericRepository<,>))` y deduplica las dos sobrecargas de `AddPersistence`. |
 
 > **Compatibilidad**: los repositorios concretos `PatientsRepository` y
 > `ContactosEmergenciaRepository` conservan la semántica de *guardar de inmediato* en
@@ -125,9 +160,9 @@ Traductor `ISpecification<TEntity>` → `IQueryable<TEntity>`. Aplica en orden:
 
 ---
 
-## 4. Uso
+## 5. Uso
 
-### 4.1 CRUD genérico directo (inyectar el repositorio genérico)
+### 5.1 CRUD genérico directo (inyectar el repositorio genérico)
 
 ```csharp
 public sealed class EjemploHandler(IGenericRepository<Paciente, long> repo)
@@ -145,9 +180,9 @@ public sealed class EjemploHandler(IGenericRepository<Paciente, long> repo)
 }
 ```
 
-### 4.2 Varias entidades en un mismo guardado
+### 5.2 Varias entidades en un mismo guardado
 
-Los repositorios genéricos comparten el `AppDbContext` de la petición (Scoped), así que un
+Los repositorios genéricos comparten el `DbContext` de la petición (Scoped), así que un
 único `SaveChangesAsync` confirma en bloque los cambios de todas las entidades:
 
 ```csharp
@@ -167,7 +202,7 @@ public sealed class AltaPacienteConContacto(
 Si se necesita una transacción explícita con `Rollback`, se puede inyectar el `AppDbContext`
 y usar `context.Database.BeginTransactionAsync(...)` en el caso de uso concreto.
 
-### 4.3 Consulta reutilizable con Specification
+### 5.3 Consulta reutilizable con Specification
 
 ```csharp
 public sealed class ContactosActivosDePacienteSpec : BaseSpecification<ContactoEmergencia>
@@ -187,7 +222,7 @@ var contactos = await repo.ListAsync(new ContactosActivosDePacienteSpec(10, 1, 2
 
 ---
 
-## 5. Verificación
+## 6. Verificación
 
 ```bash
 cd MedicalAppointments.Patient
@@ -201,12 +236,20 @@ cambios porque los repositorios concretos mantienen su contrato público.
 
 ---
 
-## 6. Cómo agregar persistencia para una entidad nueva
+## 7. Cómo agregar persistencia para una entidad nueva
 
 1. Crear la entidad en `src/Domain/Model` e implementar `IEntity<TKey>`
    (`public TKey Id => MiEntidadId;` con `[NotMapped]`).
 2. Mapearla en `AppDbContext` (`DbSet` + `IEntityTypeConfiguration`).
 3. Inyectar `IGenericRepository<MiEntidad, TKey>` donde se necesite. **No hay más código.**
 4. (Opcional) Crear una interfaz `IMiEntidadRepository : IGenericRepository<MiEntidad, TKey>`
-   con consultas específicas y una clase que derive de `GenericRepository<MiEntidad, TKey>`;
-   registrarla en `Extension.cs`.
+   con consultas específicas y una clase que derive de
+   `Persistence.Generic.GenericRepository<MiEntidad, TKey>`; registrarla en `Extension.cs`.
+
+## 8. Reutilización en otros módulos
+
+Como `Persistence.Generic` sólo depende de `Core` (contratos) y de EF Core, cualquier otro
+módulo de la solución (por ejemplo un futuro `MedicalAppointments.Appointments`) puede
+referenciar este mismo proyecto y reutilizar `GenericRepository<TEntity,TKey>` sin duplicar
+código, siempre que sus entidades implementen `IEntity<TKey>` y su propio `DbContext` las
+tenga mapeadas.

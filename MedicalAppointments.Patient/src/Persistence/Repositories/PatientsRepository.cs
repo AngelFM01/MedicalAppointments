@@ -2,7 +2,7 @@ using Core.Interfaces.Repository;
 using Domain.Model;
 using Microsoft.EntityFrameworkCore;
 using Persistence.Data;
-using Persistence.Repositories.Generic;
+using Persistence.Generic;
 
 namespace Persistence.Repositories;
 

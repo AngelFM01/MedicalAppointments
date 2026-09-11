@@ -1,7 +1,7 @@
 using Core.Interfaces.Persistence;
 using Microsoft.EntityFrameworkCore;
 
-namespace Persistence.Repositories.Generic;
+namespace Persistence.Generic;
 
 /// <summary>
 /// Algoritmo que transforma una <see cref="ISpecification{TEntity}"/> declarativa en
