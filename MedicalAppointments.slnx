@@ -1,0 +1,22 @@
+<Solution>
+  <Folder Name="/Micro_Patients/" />
+  <Folder Name="/Micro_Patients/A.Domain/">
+    <Project Path="src/Micro_Patients/MedicalAppointments.Domain/MedicalAppointments.Domain.csproj" />
+  </Folder>
+  <Folder Name="/Micro_Patients/B.Core/">
+    <Project Path="src/Micro_Patients/MedicalAppointments.Core/MedicalAppointments.Core.csproj" />
+  </Folder>
+  <Folder Name="/Micro_Patients/C.Persistence/">
+    <Project Path="src/Micro_Patients/MedicalAppointments.Persistence/MedicalAppointments.Persistence.csproj" />
+  </Folder>
+  <Folder Name="/Micro_Patients/D.Infrastructure/">
+    <Project Path="src/Micro_Patients/MedicalAppointments.Infrastructure/MedicalAppointments.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/Micro_Patients/E.Api/">
+    <Project Path="src/Micro_Patients/MedicalAppointments.Api/MedicalAppointments.Api.csproj" />
+  </Folder>
+  <Folder Name="/Nuget_Persistence/">
+    <Project Path="nugets/Nuget_Persistence/Nuget_Persistence.csproj" Id="a3c8dedd-52bf-4b69-96d1-5463865380f5" />
+  </Folder>
+  <Folder Name="/Nuget_Rest/" />
+</Solution>
