@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Nuget_Persistence.Abstractions;
+using Nuget_Persistence.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,38 +37,76 @@ namespace Nuget_Persistence.Implementations
             return await _dbSet.AsNoTracking().FirstOrDefaultAsync(predicate, cancellationToken);
         }
 
-        public async Task<IReadOnlyList<TEntity>> GetAllAsync(bool asNoTracking = true, CancellationToken cancellationToken = default)
-        {
-            IQueryable<TEntity> query = _dbSet;
-            if (asNoTracking) query = query.AsNoTracking();
-            return await query.ToListAsync(cancellationToken);
-        }
+        public async Task<IReadOnlyList<TEntity>> GetAllAsync(bool asNoTracking = true, CancellationToken cancellationToken = default) =>
+            await Query(asNoTracking).ToListAsync(cancellationToken);
 
         public async Task<IReadOnlyList<TEntity>> GetTopAsync(int count, bool asNoTracking = true, CancellationToken cancellationToken = default)
         {
             if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), "El número de registros a traer debe ser mayor a cero.");
 
-            IQueryable<TEntity> query = _dbSet;
-            if (asNoTracking) query = query.AsNoTracking();
-
             var parameter = Expression.Parameter(typeof(TEntity), "entity");
             var property = Expression.Property(parameter, GetPrimaryKeyProperty().Name);
             var keySelector = Expression.Lambda<Func<TEntity, object>>(Expression.Convert(property, typeof(object)), parameter);
 
-            return await query.OrderBy(keySelector).Take(count).ToListAsync(cancellationToken);
+            return await Query(asNoTracking).OrderBy(keySelector).Take(count).ToListAsync(cancellationToken);
+        }
+
+        public async Task<TEntity?> GetOneAsync(Expression<Func<TEntity, bool>> filter, bool asNoTracking = true, CancellationToken cancellationToken = default)
+        {
+            ArgumentNullException.ThrowIfNull(filter);
+            return await Query(asNoTracking).FirstOrDefaultAsync(filter, cancellationToken);
+        }
+
+        public async Task<PagedResult<TEntity>> GetPagedAsync(
+            int pageNumber,
+            int pageSize,
+            Expression<Func<TEntity, bool>>? filter = null,
+            Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>>? orderBy = null,
+            bool asNoTracking = true,
+            bool splitQuery = false,
+            CancellationToken cancellationToken = default,
+            params Expression<Func<TEntity, object>>[] includes)
+        {
+            if (pageNumber < 1) throw new ArgumentOutOfRangeException(nameof(pageNumber), "pageNumber debe ser 1 o mayor.");
+            if (pageSize < 1) throw new ArgumentOutOfRangeException(nameof(pageSize), "pageSize debe ser 1 o mayor.");
+
+            var query = ApplyIncludes(Query(asNoTracking), includes);
+            if (filter != null) query = query.Where(filter);
+            if (splitQuery) query = query.AsSplitQuery();
+
+            // Cuenta sobre la consulta ya filtrada (pero todavía sin ordenar/paginar).
+            var totalRecords = await query.CountAsync(cancellationToken);
+
+            query = orderBy != null ? orderBy(query) : query;
+            query = query.Skip((pageNumber - 1) * pageSize).Take(pageSize);
+
+            var data = await query.ToListAsync(cancellationToken);
+
+            return new PagedResult<TEntity>
+            {
+                Data = data,
+                TotalRecords = totalRecords,
+                PageSize = pageSize,
+                CurrentPage = pageNumber
+            };
+        }
+
+        private IQueryable<TEntity> Query(bool asNoTracking)
+        {
+            IQueryable<TEntity> query = _dbSet;
+            return asNoTracking ? query.AsNoTracking() : query;
+        }
+
+        private static IQueryable<TEntity> ApplyIncludes(IQueryable<TEntity> query, Expression<Func<TEntity, object>>[] includes)
+        {
+            foreach (var include in includes)
+                query = query.Include(include);
+            return query;
         }
 
         private IProperty GetPrimaryKeyProperty() =>
             _context.Model.FindEntityType(typeof(TEntity))?.FindPrimaryKey()?.Properties.FirstOrDefault()
                 ?? throw new InvalidOperationException($"No se pudo determinar la clave primaria de '{typeof(TEntity).Name}'.");
-
-        public async Task<TEntity?> GetOneAsync(Expression<Func<TEntity, bool>> filter, bool asNoTracking = true, CancellationToken cancellationToken = default)
-        {
-            ArgumentNullException.ThrowIfNull(filter);
-            IQueryable<TEntity> query = _dbSet;
-            if (asNoTracking) query = query.AsNoTracking();
-            return await query.FirstOrDefaultAsync(filter, cancellationToken);
-        }
 
         public async Task AddAsync(TEntity entity, CancellationToken cancellationToken = default)
         {

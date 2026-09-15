@@ -1,0 +1,16 @@
+info:
+  name: getPatientsPaged
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: https://localhost:7112/patients/paged?pageNumber=1&pageSize=10&filter=Apellidos.Contains("Diaz") AND Activo == true
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

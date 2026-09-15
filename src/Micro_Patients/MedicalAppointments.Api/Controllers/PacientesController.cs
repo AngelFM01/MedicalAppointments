@@ -3,6 +3,8 @@ using MedicalAppointments.Core.Feature.Patients.Queries;
 using MedicalAppointments.Domain.Model;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Nuget_Persistence.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace MedicalAppointments.Api.Controllers;
 
@@ -15,6 +17,29 @@ public sealed class PacientesController(IMediator mediator) : ControllerBase
     {
         var result = await mediator.Send(new GetPacientesQuery(), cancellationToken);
         return Ok(result);
+    }
+
+    [HttpGet("paged")]
+    public async Task<ActionResult<PagedResult<Paciente>>> GetPaged(
+        [FromQuery] int pageNumber,
+        [FromQuery] int pageSize,
+        [FromQuery] string? filter,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetPacientesPagedQuery
+            {
+                PageNumber = pageNumber <= 0 ? 1 : pageNumber,
+                PageSize = pageSize <= 0 ? 20 : pageSize,
+                Filter = filter
+            }, cancellationToken);
+            return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new ProblemDetails { Detail = ex.Message, Status = StatusCodes.Status400BadRequest });
+        }
     }
 
     [HttpGet("{pacienteId:long}")]

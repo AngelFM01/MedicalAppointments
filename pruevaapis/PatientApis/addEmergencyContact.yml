@@ -1,0 +1,28 @@
+info:
+  name: addEmergencyContact
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: https://localhost:7112/patients/1/EmergencyContacts
+  body:
+    type: json
+    data: |-
+      {
+        "nombreCompleto": "Maria Hernandez",
+        "parentesco": "Esposa",
+        "telefono": "+503 7200 0000",
+        "telefonoSecundario": null,
+        "email": "maria.hernandez@example.com",
+        "prioridad": 1,
+        "activo": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

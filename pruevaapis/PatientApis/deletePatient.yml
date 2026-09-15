@@ -1,0 +1,16 @@
+info:
+  name: deletePatient
+  type: http
+  seq: 1
+
+http:
+  method: DELETE
+  url: https://localhost:7112/patients/1
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

@@ -1,0 +1,38 @@
+info:
+  name: addPatient
+  type: http
+  seq: 1
+
+http:
+  method: POST
+  url: https://localhost:7112/patients
+  body:
+    type: json
+    data: |-
+      {
+        "codigoPaciente": "PAC-00055",
+        "tipoDocumento": "DUI",
+        "numeroDocumento": "00034500-1",
+        "nombres": "Steven",
+        "apellidos": "Hernandez",
+        "fechaNacimiento": "1980-05-14",
+        "sexo": "M",
+        "estadoCivil": "Soltero",
+        "telefono": "+503 7100 0000",
+        "telefonoSecundario": null,
+        "email": "stev.hernandez@example.com",
+        "direccion": "San Salvador, Col. Escalón",
+        "ciudad": "San Salvador",
+        "pais": "El Salvador",
+        "ocupacion": "Ingeniero",
+        "tipoSangre": "O+",
+        "activo": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false

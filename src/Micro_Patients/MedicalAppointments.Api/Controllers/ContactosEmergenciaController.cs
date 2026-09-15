@@ -3,6 +3,8 @@ using MedicalAppointments.Core.Feature.EmergencyContacts.Queries;
 using MedicalAppointments.Domain.Model;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Nuget_Persistence.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace MedicalAppointments.Api.Controllers;
 
@@ -13,6 +15,29 @@ public sealed class ContactosEmergenciaController(IMediator mediator) : Controll
     [HttpGet("/EmergencyContacts")]
     public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAllContacts(CancellationToken cancellationToken) =>
         Ok(await mediator.Send(new GetAllEmergencyContactsQuery(), cancellationToken));
+
+    [HttpGet("/EmergencyContacts/paged")]
+    public async Task<ActionResult<PagedResult<ContactoEmergencia>>> GetPagedContacts(
+        [FromQuery] int pageNumber,
+        [FromQuery] int pageSize,
+        [FromQuery] string? filter,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await mediator.Send(new GetEmergencyContactsPagedQuery
+            {
+                PageNumber = pageNumber <= 0 ? 1 : pageNumber,
+                PageSize = pageSize <= 0 ? 20 : pageSize,
+                Filter = filter
+            }, cancellationToken);
+            return Ok(result);
+        }
+        catch (ValidationException ex)
+        {
+            return BadRequest(new ProblemDetails { Detail = ex.Message, Status = StatusCodes.Status400BadRequest });
+        }
+    }
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<ContactoEmergencia>>> GetAll(long pacienteId, CancellationToken cancellationToken)

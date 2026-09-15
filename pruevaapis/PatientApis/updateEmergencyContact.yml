@@ -1,0 +1,28 @@
+info:
+  name: updateEmergencyContact
+  type: http
+  seq: 1
+
+http:
+  method: PUT
+  url: https://localhost:7112/patients/1/EmergencyContacts/1
+  body:
+    type: json
+    data: |-
+      {
+        "nombreCompleto": "Maria Hernandez",
+        "parentesco": "Esposa",
+        "telefono": "+503 7200 0001",
+        "telefonoSecundario": null,
+        "email": "maria.hernandez@example.com",
+        "prioridad": 1,
+        "activo": true
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
